@@ -19,6 +19,7 @@ Some modules used to automate frequent tasks.
  - [Wikipedia:Template index](https://meta.wikimedia.org/wiki/Help:Advanced_templates)
  
 #### Lua
+ - [Great Lua tutorial (1 hr)](https://youtu.be/iMacxZQMPXs)
  - [Extension:Wikibase Client/Lua](https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua)
  - [Extension:Scribunto](https://www.mediawiki.org/wiki/Extension:Scribunto)
  - [Topic on Extension talk:Scribunto](https://www.mediawiki.org/wiki/Topic:Uzryss2qi47evbx8)
