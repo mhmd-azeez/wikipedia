@@ -1,0 +1,26 @@
+# TOP 1000 missing articles about cities by site link count
+
+SELECT ?s ?desc ?linkcount WHERE {
+  # is a city
+  ?s wdt:P31 wd:Q515;
+  # get number of links (wikipedia languages)
+  wikibase:sitelinks ?linkcount.
+  
+  # filter out those that
+  MINUS {
+    # exists in ckb.wikipedia.org
+    ?article schema:about ?s;
+    schema:isPartOf <https://ckb.wikipedia.org/>.
+  }
+  
+  # get label for the entity
+  ?s rdfs:label ?desc.
+  
+  # only get the english label
+  FILTER((LANG(?desc)) = "en")
+  
+  FILTER(?linkcount >= 50) # should have at least 50 links
+}
+GROUP BY ?s ?desc ?linkcount
+ORDER BY DESC (?linkcount)
+LIMIT 1000
