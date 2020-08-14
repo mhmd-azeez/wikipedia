@@ -1,10 +1,11 @@
 # TOP 1000 missing articles about cities by site link count
 
-SELECT ?e ?desc ?linkcount WHERE {
+# We use `as` to add an alias (change the name of the variable)
+SELECT (?e as ?id) ?name ?linkCount WHERE {
   # The entity is a city
   ?e wdt:P31 wd:Q515;
   # Get number of links (wikipedia languages)
-  wikibase:sitelinks ?linkcount.
+  wikibase:sitelinks ?linkCount.
   
   # Don't inclue the entities that ❌
   MINUS {
@@ -14,13 +15,13 @@ SELECT ?e ?desc ?linkcount WHERE {
   }
   
   # Get label for the entity
-  ?e rdfs:label ?desc.
+  ?e rdfs:label ?name.
   
   # Only get the english label
-  FILTER((LANG(?desc)) = "en")
+  FILTER((LANG(?name)) = "en")
   
-  FILTER(?linkcount >= 25) # Should have at least 25 links
+  FILTER(?linkCount >= 25) # Should have at least 25 links
 }
-GROUP BY ?e ?desc ?linkcount
-ORDER BY DESC (?linkcount) # Sort by number of links, from highest to lowest
+GROUP BY ?e ?name ?linkCount
+ORDER BY DESC (?linkCount) # Sort by number of links, from highest to lowest
 LIMIT 1000 # Only get top 1000
