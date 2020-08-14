@@ -1,26 +1,26 @@
 # TOP 1000 missing articles about cities by site link count
 
-SELECT ?s ?desc ?linkcount WHERE {
-  # is a city
-  ?s wdt:P31 wd:Q515;
-  # get number of links (wikipedia languages)
+SELECT ?e ?desc ?linkcount WHERE {
+  # The entity is a city
+  ?e wdt:P31 wd:Q515;
+  # Get number of links (wikipedia languages)
   wikibase:sitelinks ?linkcount.
   
-  # filter out those that
+  # Don't inclue the entities that ❌
   MINUS {
-    # exists in ckb.wikipedia.org
-    ?article schema:about ?s;
+    # Have articles on sorani wikipedia
+    ?article schema:about ?e;
     schema:isPartOf <https://ckb.wikipedia.org/>.
   }
   
-  # get label for the entity
-  ?s rdfs:label ?desc.
+  # Get label for the entity
+  ?e rdfs:label ?desc.
   
-  # only get the english label
+  # Only get the english label
   FILTER((LANG(?desc)) = "en")
   
-  FILTER(?linkcount >= 25) # should have at least 25 links
+  FILTER(?linkcount >= 25) # Should have at least 25 links
 }
-GROUP BY ?s ?desc ?linkcount
-ORDER BY DESC (?linkcount)
-LIMIT 1000
+GROUP BY ?e ?desc ?linkcount
+ORDER BY DESC (?linkcount) # Sort by number of links, from highest to lowest
+LIMIT 1000 # Only get top 1000
