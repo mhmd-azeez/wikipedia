@@ -1,5 +1,5 @@
-# wikipedia
-A number of resources, notes, and tools for Wikipedia
+# Wikipedia Toolbox
+Resources and tools to make contribution to wikipedia easier 🙂
 
 ## [Queries](/queries)
 A number of useful queries using Wikidata's [official endpoint](https://query.wikidata.org). You can either use it interactively or use it as an API endpoint by appending `format=json` parameter.
