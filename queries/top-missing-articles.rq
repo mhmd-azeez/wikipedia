@@ -19,7 +19,7 @@ SELECT ?s ?desc ?linkcount WHERE {
   # only get the english label
   FILTER((LANG(?desc)) = "en")
   
-  FILTER(?linkcount >= 50) # should have at least 50 links
+  FILTER(?linkcount >= 25) # should have at least 25 links
 }
 GROUP BY ?s ?desc ?linkcount
 ORDER BY DESC (?linkcount)
