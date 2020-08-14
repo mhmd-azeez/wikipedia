@@ -8,8 +8,9 @@ A number of useful queries using Wikidata's [official endpoint](https://query.wi
 Some modules used to automate frequent tasks.
 
 ## Resources
- - https://query.wikidata.org/ (add `format=json` for json response)
- - https://www.wikidata.org/wiki/Wikidata:How_to_use_data_on_Wikimedia_projects
- - https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/queries
- - https://www.wikidata.org/wiki/Module:Databox
- - https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua
+ - [Wikidata:How to use data on Wikimedia projects](https://www.wikidata.org/wiki/Wikidata:How_to_use_data_on_Wikimedia_projects)
+ - [Wikidata:Stable Interface Policy](https://www.wikidata.org/wiki/Wikidata:Stable_Interface_Policy)
+ - [Extension:Wikibase Client/Lua](https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua)
+ - [Extension:Scribunto](https://www.mediawiki.org/wiki/Extension:Scribunto)
+ - [Wikidata Query Service](https://query.wikidata.org/)
+ - [Wikidata:SPARQL query service/queries](https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/queries) (Example queries)
