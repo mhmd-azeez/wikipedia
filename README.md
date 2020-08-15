@@ -20,6 +20,7 @@ Some modules used to automate frequent tasks.
  
 #### Lua
  - [Great Lua tutorial (1 hr)](https://youtu.be/iMacxZQMPXs)
+ - [MediaWiki Lua](https://www.mediawiki.org/wiki/Lua)
  - [Extension:Scribunto/Lua reference manual](https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#Differences_from_standard_Lua)
  - [Extension:Wikibase Client/Lua](https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua)
  - [Extension:Scribunto](https://www.mediawiki.org/wiki/Extension:Scribunto)
