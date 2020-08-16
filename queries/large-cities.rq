@@ -1,6 +1,4 @@
-# Information about large cities
-
-SELECT distinct  ?cityLabel ?population ?article (GROUP_CONCAT(distinct ?capital; SEPARATOR=",") AS ?capitals) (GROUP_CONCAT(distinct ?elevation; SEPARATOR=",") AS ?elevations) (GROUP_CONCAT(distinct ?area; SEPARATOR=",") AS ?areas) (GROUP_CONCAT(distinct ?postal_code; SEPARATOR=",") AS ?postal_codes)  (GROUP_CONCAT(distinct ?timezone; SEPARATOR=",") AS ?timezones) (GROUP_CONCAT(distinct ?coordinate; SEPARATOR=",") AS ?coordinates) (GROUP_CONCAT(distinct ?website; SEPARATOR=",") AS ?websites) (GROUP_CONCAT(distinct ?native_label; SEPARATOR=",") AS ?native_labels) (GROUP_CONCAT(distinct ?official_name; SEPARATOR=",") AS ?official_names) (GROUP_CONCAT(distinct ?countryLabel; SEPARATOR=",") AS ?countries) (GROUP_CONCAT(?collage_image; SEPARATOR=",") AS ?collage_images) (GROUP_CONCAT(?map; SEPARATOR=",") AS ?maps) #(GROUP_CONCAT(?image; SEPARATOR=",") AS ?images)
+SELECT distinct  ?cityLabel ?population ?article (GROUP_CONCAT(distinct ?capital; SEPARATOR=",") AS ?capitals) (GROUP_CONCAT(distinct ?elevation; SEPARATOR=",") AS ?elevations) (GROUP_CONCAT(distinct ?area; SEPARATOR=",") AS ?areas) (GROUP_CONCAT(distinct ?postal_code; SEPARATOR=",") AS ?postal_codes)  (GROUP_CONCAT(distinct ?timezone; SEPARATOR=",") AS ?timezones) (GROUP_CONCAT(distinct ?coordinate; SEPARATOR=",") AS ?coordinates) (GROUP_CONCAT(distinct ?website; SEPARATOR=",") AS ?websites) (GROUP_CONCAT(distinct ?native_label; SEPARATOR=",") AS ?native_labels) (GROUP_CONCAT(distinct ?official_name; SEPARATOR=",") AS ?official_names) (GROUP_CONCAT(distinct ?countryLabel; SEPARATOR=",") AS ?countries)
 {
   ?city wdt:P31 wd:Q515 ;
         wdt:P1082 ?population ;
@@ -8,20 +6,20 @@ SELECT distinct  ?cityLabel ?population ?article (GROUP_CONCAT(distinct ?capital
 
   FILTER (?population > 10000 && ?country = wd:Q16 )
   
-  OPTIONAL {?city wdt:P2716 ?collage_image }
+  # OPTIONAL {?city wdt:P2716 ?collage_image }
   OPTIONAL {?city wdt:P1705 ?native_label }
   OPTIONAL {?city wdt:P1448 ?official_name }
   OPTIONAL {?city wdt:P2044 ?elevation }
   OPTIONAL {?city wdt:P2046 ?area }
   OPTIONAL {?city wdt:P281 ?postal_code }
   OPTIONAL {?city wdt:P856 ?website }
-  OPTIONAL {?city wdt:P242 ?map }
+  # OPTIONAL {?city wdt:P242 ?map }
   # OPTIONAL {?city wdt:P18 ?image }
   OPTIONAL {?city wdt:P421 ?timezone }
   OPTIONAL {?city wdt:P625 ?coordinate }
   OPTIONAL {?city wdt:P1376 ?capital }
   
-  # BIND (BOUND(?capital) as ?is_capital)
+  # BIND (BOUND(?capital) as ?is_capital) --
   
   OPTIONAL {
   ?article schema:about ?city .
