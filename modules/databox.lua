@@ -1,3 +1,6 @@
+-- https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual
+-- https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua
+
 local property_blacklist = {
     'P360', --is a list of
     'P4224', --category contains
@@ -77,6 +80,20 @@ function valuesToKeys(array)
 	return result
 end
 
+-- Convert Arabic numbers (0123456789) to Kurdish numbers (٠١٢٣٤٥٦٧٨٩)
+function toKurdishNumbers(text)
+	return text:gsub('0', '٠')
+			  :gsub('1', '١')
+			  :gsub('2', '٢')
+			  :gsub('3', '٣')
+			  :gsub('4', '٤')
+			  :gsub('5', '٥')
+			  :gsub('6', '٦')
+			  :gsub('7', '٧')
+			  :gsub('8', '٨')
+			  :gsub('9', '٩')
+end
+
 -- Get all properties that are overriden by the template
 function getOverridenProperties(args)
 	properties = {}
@@ -114,9 +131,7 @@ function p.databox(frame)
 	
     local lang = mw.language.getContentLanguage()
     local item = mw.wikibase.getEntity(itemId)
-    
-    mw.log('1')
-    
+
     if item == nil then
         mw.addWarning("Wikidata item not found")
         return ""
@@ -163,15 +178,13 @@ function p.databox(frame)
             ['width'] = '100%',
             ['table-layout'] = 'fixed',
         })
-        
-    mw.log('3')
-
+ 
     local properties = mw.wikibase.orderProperties(item:getProperties())
     local property_blacklist_hash = valuesToKeys(mergeTables(property_blacklist, hidden_properties))
-    mw.logObject(property_blacklist_hash)
+
     property_blacklist_hash['P31'] = true --Special property
     local edit_message = mw.message.new('vector-view-edit'):plain()
-    
+  
     for _, property in pairs(properties) do
         local datatype = item.claims[property][1].mainsnak.datatype
 
@@ -195,6 +208,10 @@ function p.databox(frame)
             elseif (value:find("^[Q]%d+") ~= nil) then -- Is a wikidata ID
             	value = '[[' .. mw.wikibase.getSitelink(value) .. ']]'
             end
+			
+			if (property ~= 'P625') then -- coordinate location
+            	value = toKurdishNumbers(value)
+            end
 
             row = dataTable:tag('tr')
                 :tag('th')
@@ -202,10 +219,6 @@ function p.databox(frame)
                     :wikitext(lang:ucfirst(propertyValue.label)):done()
                 :tag('td')
                     :wikitext(frame:preprocess(value))
-                    
-            if not overriden then -- Don't show edit icon for overriden properties
-                row:wikitext('&nbsp;[[File:OOjs UI icon edit-ltr.svg|' .. edit_message .. '|12px|baseline|class=noviewer|link=https://www.wikidata.org/wiki/' .. item.id .. '#' .. property .. ']]')
-            end
         end
     end
      
@@ -234,9 +247,11 @@ function p.databox(frame)
             align = 'center',
             latitude = latitude,
             longitude = longitude,
-            zoom = zoom
+            zoom = 6 -- 100 km
         }))
-     end
+    end
+
+	databoxRoot:wikitext('<div style="border-style: solid; border-color:gray; border-width: 1px 0 0 0; margin-top: 2em; text-align: center;"> [https://www.wikidata.org/wiki/' .. item.id .. ' دەستکاری زانیارییەکان بکە لە ویکیدراوە]</div>')
      
      return tostring(databoxRoot)
 end
