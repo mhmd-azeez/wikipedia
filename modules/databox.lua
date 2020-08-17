@@ -53,7 +53,11 @@ local property_blacklist = {
     'P1282', -- OSM tag or key
     'P4839', -- Wolfram Language entity code
     'P6104', -- Maintained by Wikiproject
-    'P5996' -- Category for films in this language
+    'P5996', -- Category for films in this language
+    
+    'P735', -- Given name
+    'P734', -- Family name
+    'P1559' -- Native name
 }
 
 -- Merge two tables and return a new table
@@ -159,9 +163,29 @@ function p.databox(frame)
         })
         :wikitext(item:getLabel() or mw.title.getCurrentTitle().text)
 
+	-- Native name P1559
+	local nativeName = item:getBestStatements('P1559')
+	if #nativeName >= 1 then
+		local nativeName = nativeName[1].mainsnak.datavalue.value
+		if nativeName.language ~= 'ckb' then -- Don't show native name if the native name was in Kurdish
+			local langName = mw.language.fetchLanguageName(nativeName.language, 'ckb')
+
+			databoxRoot:tag('div')
+	        :css({
+	            ['text-align'] = 'center',
+	            ['background-color'] = '#f5f5f5',
+	            padding = '0.5em 0',
+	            margin = '0.5em 0',
+	            ['font-size'] = '80%',
+	            ['font-weight'] = 'bold',
+	        })
+	        :wikitext('بە  [[' .. langName ..']]: ' .. nativeName.text)
+		end
+	end
+
      --Image
     local images = item:getBestStatements('P18')
-    if #images == 1 then
+    if #images >= 1 then
         databoxRoot
             :tag('div')
             :wikitext('[[File:' .. images[1].mainsnak.datavalue.value .. '|frameless|250px]]')
