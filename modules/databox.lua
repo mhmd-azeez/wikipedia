@@ -1,3 +1,7 @@
+-- Please DO NOT edit this page unless you know what you are doing.
+-- Maintainer: User:Encrypt0r 
+
+
 -- https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual
 -- https://www.mediawiki.org/wiki/Extension:Wikibase_Client/Lua
 
@@ -57,7 +61,18 @@ local property_blacklist = {
     
     'P735', -- Given name
     'P734', -- Family name
-    'P1559' -- Native name
+    'P1559', -- Native name
+    'P21', -- Sex or gender
+    'P373', -- Commons category
+    'P910', -- topic's main category
+    'P1792', -- category of associated people
+    'P1464', -- category for people born here
+    'P2184', -- history of topic
+    'P1438', -- Jewish Encyclopedia ID
+    'P206', -- located in or next to body of water
+    'P7867', -- category for maps
+    'P8402', -- Open Data portal
+    'P1448', -- official name
 }
 
 -- Merge two tables and return a new table
@@ -96,6 +111,49 @@ function toKurdishNumbers(text)
 			  :gsub('7', '٧')
 			  :gsub('8', '٨')
 			  :gsub('9', '٩')
+			  :gsub('square kilometre', 'کیلۆمەتر دووجا')
+			  :gsub('kilometre', 'کیلۆمەتر')
+end
+
+function isEnglish(text)
+	return string.find(text, '[abcdefghijklmnopqrstuvwxyz]') ~= nil
+end
+
+-- Returns the best statements for the first property this item has
+function getBestStatement(item, ...)
+	for i,v in ipairs(arg) do
+        local statements = item:getBestStatements(v)
+        if len(statements) >= 1 and statements[1] then
+        	return statements[1].mainsnak.datavalue.value
+        end
+	end
+
+	return nil
+end
+
+-- Returns the formatted best statements for the first property this item has
+function formatStatment(item, ...)
+	for i,v in ipairs(arg) do
+        local statement = item:formatStatements(v)
+        if statement and not isEmpty(statement.value) then
+        	return statement.value
+        end
+	end
+
+	return nil
+end
+
+-- Gets the length of a table
+-- https://stackoverflow.com/a/2705804/7003797
+function len(t)
+  local count = 0
+  for _ in pairs(t) do count = count + 1 end
+  return count
+end
+
+-- checks if a string is empty
+function isEmpty(s)
+  return s == nil or s == ''
 end
 
 -- Get all properties that are overriden by the template
@@ -128,7 +186,7 @@ function p.databox(frame)
     	show_english_properties = false
     end
     
-    local overriden_properties = {} getOverridenProperties(args)
+    local overriden_properties = getOverridenProperties(args)
     
     if not args.black_list then args.black_list = '' end
     local hidden_properties = mw.text.split(args.black_list, "%s*,%s*")
@@ -163,13 +221,11 @@ function p.databox(frame)
         })
         :wikitext(item:getLabel() or mw.title.getCurrentTitle().text)
 
-	-- Native name P1559
-	local nativeName = item:getBestStatements('P1559')
-	if #nativeName >= 1 then
-		local nativeName = nativeName[1].mainsnak.datavalue.value
-		if nativeName.language ~= 'ckb' then -- Don't show native name if the native name was in Kurdish
-			local langName = mw.language.fetchLanguageName(nativeName.language, 'ckb')
-
+	-- Native name: P1559, Official name: P1448
+	local officialName = getBestStatement(item, 'P1448', 'P1559')
+	if officialName then
+		if officialName.language ~= 'ckb' then -- Don't show official name if the official name was in Kurdish
+			local langName = mw.language.fetchLanguageName(officialName.language, 'ckb')
 			databoxRoot:tag('div')
 	        :css({
 	            ['text-align'] = 'center',
@@ -179,11 +235,52 @@ function p.databox(frame)
 	            ['font-size'] = '80%',
 	            ['font-weight'] = 'bold',
 	        })
-	        :wikitext('بە  [[' .. langName ..']]: ' .. nativeName.text)
+	        :wikitext('بە  [[' .. langName ..']]: ' .. officialName.text)
 		end
 	end
+	
+	-- Date of birth OR Inception OR and Start time
+	local start_date = formatStatment(item, 'P569', 'P571', 'P580')
+	-- Date of death OR Dissoloved, abolished or demolished OR End Time
+	local end_date = formatStatment(item, 'P570', 'P576', 'P582')
 
-     --Image
+	if start_date then
+		life = ''
+		local start_date = toKurdishNumbers(start_date)
+		if end_date then
+			life = start_date .. ' - ' .. toKurdishNumbers(end_date)
+		else
+			life = start_date .. ' - ' .. 'ئێستا'
+		end
+		
+		databoxRoot:tag('div')
+	        :css({
+	            ['text-align'] = 'center',
+	            ['background-color'] = '#f5f5f5',
+	            padding = '0.5em 0',
+	            margin = '0.5em 0',
+	            ['font-size'] = '80%',
+	            ['font-weight'] = 'bold',
+	        })
+	        :wikitext(life)
+	end
+	
+	-- Description
+    local description = item:getDescriptionWithLang('ckb')
+    if description and not isEnglish(description) then
+    	databoxRoot:tag('div')
+	        :css({
+	            ['text-align'] = 'center',
+	            ['background-color'] = '#f5f5f5',
+	            padding = '0.5em 0',
+	            margin = '0.5em 0',
+	            ['font-size'] = '80%',
+	            ['font-weight'] = 'bold',
+	        })
+	        :wikitext(description)
+    end
+
+    --Image
     local images = item:getBestStatements('P18')
     if #images >= 1 then
         databoxRoot
@@ -215,6 +312,13 @@ function p.databox(frame)
         local english_label = mw.wikibase.getLabelByLang(property, 'en')
         local kurdish_label = mw.wikibase.getLabelByLang(property, 'ckb')
 
+		-- These properties have datatype of quantity, but we want to show them!
+		if property == 'P1082' or -- population
+		   property == 'P2046' or -- area
+		   property == 'P2044' then -- elevation above sea level
+		      datatype = 'number'
+		end
+
         if datatype ~= 'commonsMedia' and datatype ~= 'external-id' and
            datatype ~= 'quantity' and datatype ~= 'wikibase-property' and
            datatype ~= 'geo-shape' and datatype ~= 'tabular-data' and
@@ -235,8 +339,8 @@ function p.databox(frame)
 			
 			if (property ~= 'P625') then -- coordinate location
             	value = toKurdishNumbers(value)
-            end
-
+			end
+        
             row = dataTable:tag('tr')
                 :tag('th')
                     :attr('scope', 'row')
@@ -274,8 +378,11 @@ function p.databox(frame)
             zoom = 6 -- 100 km
         }))
     end
-
-	databoxRoot:wikitext('<div style="border-style: solid; border-color:gray; border-width: 1px 0 0 0; margin-top: 2em; text-align: center;"> [https://www.wikidata.org/wiki/' .. item.id .. ' دەستکاری زانیارییەکان بکە لە ویکیدراوە]</div>')
+	
+	local div_start = '<div style="border-style: solid; border-color:gray; border-width: 1px 0 0 0; margin-top: 2em; text-align: center;">'
+	local pen_icon = '&nbsp;[[File:OOjs UI icon edit-ltr.svg|' .. edit_message .. '|12px|baseline|class=noviewer|link=https://www.wikidata.org/wiki/' .. item.id .. ']]'
+	local edit_message_link = '[https://www.wikidata.org/wiki/' .. item.id .. ' لە ویکیدراوە دەستکاریی زانیارییەکان بکە]'
+	databoxRoot:wikitext(div_start .. edit_message_link .. pen_icon .. '</div>')
      
      return tostring(databoxRoot)
 end
