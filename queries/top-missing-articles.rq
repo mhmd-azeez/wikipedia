@@ -1,11 +1,23 @@
-# TOP 1000 missing articles about cities by site link count
+# TOP 100 missing articles about cities by site link count
 
 # We use `as` to add an alias (change the name of the variable)
-SELECT (?e as ?id) ?name ?linkCount WHERE {
+SELECT (?e as ?id) ?name ?linkCount ?image ?description WHERE {
   # The entity is a city
-  ?e wdt:P31 wd:Q515;
+  ?e wdt:P31 wd:Q515 ;
+     wdt:P18 ?image ;
+
   # Get number of links (wikipedia languages)
   wikibase:sitelinks ?linkCount.
+  
+  # Get description of the entity
+  ?e schema:description ?description.
+  FILTER ( lang(?description) = "en" )
+  
+  # Get label for the entity
+  ?e rdfs:label ?name.
+  
+  # Only get the english label
+  FILTER((LANG(?name)) = "en")
   
   # Don't inclue the entities that ❌
   MINUS {
@@ -14,14 +26,10 @@ SELECT (?e as ?id) ?name ?linkCount WHERE {
     schema:isPartOf <https://ckb.wikipedia.org/>.
   }
   
-  # Get label for the entity
-  ?e rdfs:label ?name.
   
-  # Only get the english label
-  FILTER((LANG(?name)) = "en")
   
   FILTER(?linkCount >= 25) # Should have at least 25 links
 }
-GROUP BY ?e ?name ?linkCount
+GROUP BY ?e ?name ?linkCount ?image ?description
 ORDER BY DESC (?linkCount) # Sort by number of links, from highest to lowest
-LIMIT 1000 # Only get top 1000
+LIMIT 100 # Only get top 100
