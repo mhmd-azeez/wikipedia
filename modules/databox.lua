@@ -94,7 +94,7 @@ end
 function valuesToKeys(array)
 	local result = {}
 	for _, v in pairs(array) do
-		result[v] = true
+		result[v:upper()] = true
 	end
 	return result
 end
@@ -131,18 +131,6 @@ function getBestStatement(item, ...)
 	return nil
 end
 
--- Returns the formatted best statements for the first property this item has
-function formatStatment(item, ...)
-	for i,v in ipairs(arg) do
-        local statement = item:formatStatements(v)
-        if statement and not isEmpty(statement.value) then
-        	return statement.value
-        end
-	end
-
-	return nil
-end
-
 -- Gets the length of a table
 -- https://stackoverflow.com/a/2705804/7003797
 function len(t)
@@ -156,15 +144,14 @@ function isEmpty(s)
   return s == nil or s == ''
 end
 
+local module_properties = { ['item'] = true, ['بەند'] = true, ['پێڕستی ڕەش'] = true, ['تەنیا کوردی'] = true }
 -- Get all properties that are overriden by the template
 function getOverridenProperties(args)
 	properties = {}
 	
 	for key, value in pairs(args) do
-		if (key:find("^p_")) then -- If the property name starts with 'p_'
-			key = string.sub(key, 3) -- remove the prefix 'p_'
-			local result, _ = string.gsub(key, "_", " ") -- change underscore into space
-			properties[result] = value
+		if (not module_properties[key]) then -- If it was not a module property
+			properties[key:upper()] = value
     	end
 	end
 	
@@ -178,19 +165,21 @@ function p.databox(frame)
     local itemId = nil
     local show_english_properties = true
     
-    if args.item then
-        itemId = args.item
+    if args.item or args['بەند'] then
+        itemId = args.item or args['بەند']
     end
     
-    if args.only_kurdish_properties then
+    if args['تەنیا کوردی'] == true or args['تەنیا کوردی'] == 'بەڵێ' then
     	show_english_properties = false
     end
     
     local overriden_properties = getOverridenProperties(args)
     
-    if not args.black_list then args.black_list = '' end
-    local hidden_properties = mw.text.split(args.black_list, "%s*,%s*")
-	
+    local hidden_properties = {}
+    if args['پێڕستی ڕەش'] then
+    	hidden_properties = mw.text.split(args['پێڕستی ڕەش'], "%s*[,،]%s*")
+    end
+
     local lang = mw.language.getContentLanguage()
     local item = mw.wikibase.getEntity(itemId)
 
@@ -239,47 +228,6 @@ function p.databox(frame)
 		end
 	end
 	
-	-- Date of birth OR Inception OR and Start time
-	local start_date = formatStatment(item, 'P569', 'P571', 'P580')
-	-- Date of death OR Dissoloved, abolished or demolished OR End Time
-	local end_date = formatStatment(item, 'P570', 'P576', 'P582')
-
-	if start_date then
-		life = ''
-		local start_date = toKurdishNumbers(start_date)
-		if end_date then
-			life = start_date .. ' - ' .. toKurdishNumbers(end_date)
-		else
-			life = start_date .. ' - ' .. 'ئێستا'
-		end
-		
-		databoxRoot:tag('div')
-	        :css({
-	            ['text-align'] = 'center',
-	            ['background-color'] = '#f5f5f5',
-	            padding = '0.5em 0',
-	            margin = '0.5em 0',
-	            ['font-size'] = '80%',
-	            ['font-weight'] = 'bold',
-	        })
-	        :wikitext(life)
-	end
-	
-	-- Description
-    local description = item:getDescriptionWithLang('ckb')
-    if description and not isEnglish(description) then
-    	databoxRoot:tag('div')
-	        :css({
-	            ['text-align'] = 'center',
-	            ['background-color'] = '#f5f5f5',
-	            padding = '0.5em 0',
-	            margin = '0.5em 0',
-	            ['font-size'] = '80%',
-	            ['font-weight'] = 'bold',
-	        })
-	        :wikitext(description)
-    end
-
     --Image
     local images = item:getBestStatements('P18')
     if #images >= 1 then
@@ -309,7 +257,7 @@ function p.databox(frame)
     for _, property in pairs(properties) do
         local datatype = item.claims[property][1].mainsnak.datatype
 
-        local english_label = mw.wikibase.getLabelByLang(property, 'en')
+        local english_label = mw.wikibase.getLabelByLang(property, 'en'):upper()
         local kurdish_label = mw.wikibase.getLabelByLang(property, 'ckb')
 
 		-- These properties have datatype of quantity, but we want to show them!
@@ -317,21 +265,27 @@ function p.databox(frame)
 		   property == 'P2046' or -- area
 		   property == 'P2044' then -- elevation above sea level
 		      datatype = 'number'
-		end
+		   end
+	
+		overriden_value = overriden_properties[english_label] or overriden_properties[kurdish_label]
 
         if datatype ~= 'commonsMedia' and datatype ~= 'external-id' and
            datatype ~= 'quantity' and datatype ~= 'wikibase-property' and
            datatype ~= 'geo-shape' and datatype ~= 'tabular-data' and
-           (not property_blacklist_hash[property] and not property_blacklist_hash[english_label]) and
-           (show_english_properties or kurdish_label ~= nil) and
+           (not property_blacklist_hash[property] and not property_blacklist_hash[english_label] and not property_blacklist_hash[kurdish_label]) and
+           (show_english_properties or kurdish_label ~= nil or overriden_value) and
            #item:getBestStatements(property) <= 5 then
-           	
+
             local propertyValue = item:formatStatements(property) -- label, value
 
 			local overriden = true
-            local value = overriden_properties[english_label]
+            local value = overriden_value
             if (value == nil) then
-            	value = propertyValue.value
+            	if datatype == 'time' then
+            		value = lang:formatDate('jی xg Y', getBestStatement(item, property).value)
+            	else
+            		value = propertyValue.value
+            	end
             	overriden = false
             elseif (value:find("^[Q]%d+") ~= nil) then -- Is a wikidata ID
             	value = '[[' .. mw.wikibase.getSitelink(value) .. ']]'
