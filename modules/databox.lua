@@ -73,6 +73,14 @@ local property_blacklist = {
     'P7867', -- category for maps
     'P8402', -- Open Data portal
     'P1448', -- official name
+    'P569', -- date of birth
+	'P570', -- date of death
+	'P19', -- place of birth
+	'P20', -- place of death
+	'P27', -- country of citizenship
+	'P2747', -- Filmiroda rating
+	'P1552', -- has quality
+	'P7561', -- category for the interior of the item
 }
 
 -- Merge two tables and return a new table
@@ -99,6 +107,89 @@ function valuesToKeys(array)
 	return result
 end
 
+function getBirthStatement(lang, date_of_birth, date_of_death, place_of_birth)
+	local birth_time = ''
+	if date_of_death then
+		birth_time = formatDate(lang, date_of_birth.time)
+	else
+		local date_of_birth_parts = mw.text.split(formatDate(lang, date_of_birth.time, nil, 'Y-m-j'), '-')
+
+		birth_time = string.format('{{ڕۆژی لەدایکبوون و تەمەن|%s|%s|%s}}', 
+			date_of_birth_parts[1], date_of_birth_parts[2], date_of_birth_parts[3])
+	end
+	local birth = birth_time
+
+	if place_of_birth then
+		local birth_location = mw.wikibase.getSitelink(place_of_birth.id, 'ckbwiki')
+		
+		local link = true
+		if not birth_location then
+			 birth_location = mw.wikibase.getSitelink(place_of_birth.id, 'enwiki')
+			 link = false
+		end
+		
+		if link then birth_location = '[[' .. birth_location .. ']]' end
+			 
+		birth = birth .. ' لە ' .. birth_location
+	
+		local birth_country = getBestStatementById(place_of_birth.id, 'P17')
+		if birth_country then
+			birth_country = mw.wikibase.getSitelink(birth_country.id, 'ckbwiki')
+			local link = true
+			if not birth_country then
+				 birth_country = mw.wikibase.getSitelink(birth_country.id, 'enwiki')
+				 link = false
+			end
+			
+			if link then birth_country = '[[' .. birth_country .. ']]' end
+
+			birth = birth .. '، ' .. birth_country
+		end
+	end
+	
+	return birth
+end
+
+function getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
+	local date_of_birth_parts = mw.text.split(formatDate(lang, date_of_birth.time, nil, 'Y-m-j'), '-')
+	local date_of_death_parts = mw.text.split(formatDate(lang, date_of_death.time, nil, 'Y-m-j'), '-')
+
+	local death_time = string.format('{{ڕێکەوتی مەرگ و تەمەن|%s|%s|%s|%s|%s|%s}}', 
+		date_of_death_parts[1], date_of_death_parts[2], date_of_death_parts[3],
+		date_of_birth_parts[1], date_of_birth_parts[2], date_of_birth_parts[3])
+	
+	if place_of_death then
+		local death_location = mw.wikibase.getSitelink(place_of_death.id, 'ckbwiki')
+		
+		local link = true
+		if not death_location then
+			death_location = mw.wikibase.getSitelink(place_of_death.id, 'enwiki')
+			link = false
+		end
+		
+		if link then death_location = '[[' .. death_location .. ']]' end
+			
+		death = death_time .. ' لە ' .. death_location
+	
+		local death_country = getBestStatementById(place_of_death.id, 'P17')
+		if death_country then
+			death_country = mw.wikibase.getSitelink(death_country.id, 'ckbwiki')
+			
+			local link = true
+			if not death_country then
+				 death_country = mw.wikibase.getSitelink(death_country.id, 'enwiki')
+				 link = false
+			end
+			
+			if link then death_country = '[[' .. death_country .. ']]' end
+			
+			death = death .. '، ' .. death_country
+		end
+	end
+
+	return death
+end
+
 -- Convert Arabic numbers (0123456789) to Kurdish numbers (٠١٢٣٤٥٦٧٨٩)
 function toKurdishNumbers(text)
 	return text:gsub('0', '٠')
@@ -115,6 +206,18 @@ function toKurdishNumbers(text)
 			  :gsub('kilometre', 'کیلۆمەتر')
 end
 
+function formatDate(lang, dateString, fallback, format)
+	if not format then format = 'jی xg Y' end
+	
+	-- formatDate only supports positive (AD) dates
+	if dateString:sub(1, 1) == '-' then return fallback or dateString end
+	
+	-- Work-around for a bug in Scribunto, more info: https://phabricator.wikimedia.org/T261072
+	dateString = dateString:gsub('%-00%-00T', '-01-01T')
+	
+	return lang:formatDate(format, dateString, false)
+end
+
 function isEnglish(text)
 	return string.find(text, '[abcdefghijklmnopqrstuvwxyz]') ~= nil
 end
@@ -123,6 +226,18 @@ end
 function getBestStatement(item, ...)
 	for i,v in ipairs(arg) do
         local statements = item:getBestStatements(v)
+        if len(statements) >= 1 and statements[1] then
+        	return statements[1].mainsnak.datavalue.value
+        end
+	end
+
+	return nil
+end
+
+-- Returns the best statements for the first property this item has
+function getBestStatementById(id, ...)
+	for i,v in ipairs(arg) do
+        local statements = mw.wikibase.getBestStatements( id, v)
         if len(statements) >= 1 and statements[1] then
         	return statements[1].mainsnak.datavalue.value
         end
@@ -233,6 +348,7 @@ function p.databox(frame)
     if #images >= 1 then
         databoxRoot
             :tag('div')
+            :css({ ['text-align'] = 'center'})
             :wikitext('[[File:' .. images[1].mainsnak.datavalue.value .. '|frameless|250px]]')
     end
 
@@ -253,7 +369,36 @@ function p.databox(frame)
 
     property_blacklist_hash['P31'] = true --Special property
     local edit_message = mw.message.new('vector-view-edit'):plain()
-  
+	
+	-- Birth
+	local date_of_birth = getBestStatement(item, 'P569')
+	local date_of_death = getBestStatement(item, 'P570')
+	local instance_of = getBestStatement(item, 'P31')
+	local place_of_birth = getBestStatement(item, 'P19')
+	local place_of_death = getBestStatement(item, 'P20')
+
+	if instance_of and instance_of.id == 'Q5' and date_of_birth and date_of_birth.time:sub(1, 1) ~= '-' then -- human and birth date >= 0 AD
+		local birth = getBirthStatement(lang, date_of_birth, date_of_death, place_of_birth)
+		
+		dataTable:tag('tr')
+                :tag('th')
+                    :attr('scope', 'row')
+                    :wikitext('لەدایکبوون'):done()
+                :tag('td')
+                    :wikitext(frame:preprocess(birth))
+                    
+        if date_of_death then
+        	local death = getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
+	        dataTable:tag('tr')
+	                :tag('th')
+	                    :attr('scope', 'row')
+	                    :wikitext('مردن'):done()
+	                :tag('td')
+	                    :wikitext(frame:preprocess(death))
+	    end
+	end
+	
+	
     for _, property in pairs(properties) do
         local datatype = item.claims[property][1].mainsnak.datatype
 
@@ -282,7 +427,12 @@ function p.databox(frame)
             local value = overriden_value
             if (value == nil) then
             	if datatype == 'time' then
-            		value = lang:formatDate('jی xg Y', getBestStatement(item, property).value)
+            		local dateString = getBestStatement(item, property).time
+        			if property == 'P1317' then -- floruit
+        				value = formatDate(lang, dateString, propertyValue.value, 'Y')
+        			else
+        				value = formatDate(lang, dateString, propertyValue.value)
+        			end
             	else
             		value = propertyValue.value
             	end
@@ -291,7 +441,7 @@ function p.databox(frame)
             	value = '[[' .. mw.wikibase.getSitelink(value) .. ']]'
             end
 			
-			if (property ~= 'P625') then -- coordinate location
+			if (datatype == 'time' or datatype == 'number') then -- coordinate location
             	value = toKurdishNumbers(value)
 			end
         
