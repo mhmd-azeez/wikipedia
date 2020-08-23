@@ -81,6 +81,7 @@ local property_blacklist = {
 	'P2747', -- Filmiroda rating
 	'P1552', -- has quality
 	'P7561', -- category for the interior of the item
+	'P1196', -- manner of death
 }
 
 -- Merge two tables and return a new table
