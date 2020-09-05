@@ -82,6 +82,10 @@ local property_blacklist = {
 	'P1552', -- has quality
 	'P7561', -- category for the interior of the item
 	'P1196', -- manner of death
+	'P6365', -- member category
+	'P465', -- sRGB color hex triplet
+	'P487', -- Unicode character
+	'P7084', -- related category
 }
 
 -- Merge two tables and return a new table
@@ -131,7 +135,7 @@ function getBirthStatement(lang, date_of_birth, date_of_death, place_of_birth)
 		
 		if link then birth_location = '[[' .. birth_location .. ']]' end
 			 
-		birth = birth .. ' لە ' .. birth_location
+		birth = birth .. '<br>' .. birth_location
 	
 		local birth_country = getBestStatementById(place_of_birth.id, 'P17')
 		if birth_country then
@@ -170,7 +174,7 @@ function getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
 		
 		if link then death_location = '[[' .. death_location .. ']]' end
 			
-		death = death_time .. ' لە ' .. death_location
+		death = death_time .. '<br>' .. death_location
 	
 		local death_country = getBestStatementById(place_of_death.id, 'P17')
 		if death_country then
@@ -304,24 +308,24 @@ function p.databox(frame)
         return ""
     end
 
-    local databoxRoot = mw.html.create('div')
-        :addClass('infobox')
+    --Table
+    local dataTable = mw.html.create('table')
+    	:addClass('infobox vcard')
         :css({
-            float = 'left',
-            border = '1px solid #aaa',
-            ['max-width'] = '300px',
-            padding = '0 0.4em',
-            margin = '0 0 0.4em 0.4em',
+            ['width'] = '22em'
         })
 
     -- Title
-    databoxRoot:tag('div')
+    dataTable:tag('tr'):tag('th')
+    	:addClass('fn')
+    	:attr('colspan', 2)
         :css({
             ['text-align'] = 'center',
-            ['background-color'] = '#f5f5f5',
-            padding = '0.5em 0',
-            margin = '0.5em 0',
-            ['font-size'] = '120%',
+            ['background-color'] = '#007BA7',
+            ['padding'] = '0.5em 0',
+            ['margin'] = '0.5em 0',
+            ['font-size'] = '125%',
+            ['color'] = '#ffffff',
             ['font-weight'] = 'bold',
         })
         :wikitext(item:getLabel() or mw.title.getCurrentTitle().text)
@@ -331,40 +335,36 @@ function p.databox(frame)
 	if officialName then
 		if officialName.language ~= 'ckb' then -- Don't show official name if the official name was in Kurdish
 			local langName = mw.language.fetchLanguageName(officialName.language, 'ckb')
-			databoxRoot:tag('div')
+			dataTable:tag('tr'):tag('th')
+	    	:attr('colspan', 2)
 	        :css({
 	            ['text-align'] = 'center',
-	            ['background-color'] = '#f5f5f5',
 	            padding = '0.5em 0',
 	            margin = '0.5em 0',
-	            ['font-size'] = '80%',
+	            ['font-size'] = '90%',
 	            ['font-weight'] = 'bold',
+	            ['max-width'] = '180px'
 	        })
 	        :wikitext('بە  [[' .. langName ..']]: ' .. officialName.text)
 		end
 	end
 	
     --Image
-    local images = item:getBestStatements('P18')
-    if #images >= 1 then
-        databoxRoot
-            :tag('div')
+    local image = args['وێنە']
+    if (image == nil) then
+    	local images = item:getBestStatements('P18')
+    	if #images >= 1 then
+    		image = images[1].mainsnak.datavalue.value
+    	end
+    end
+    
+    if image ~= nil then
+        dataTable:tag('tr'):tag('td')
+            :attr('colspan', 2)
             :css({ ['text-align'] = 'center'})
-            :wikitext('[[File:' .. images[1].mainsnak.datavalue.value .. '|frameless|250px]]')
+            :wikitext('[[File:' .. image .. '|frameless|250px]]')
     end
 
-    --Table
-    local dataTable = databoxRoot
-        :tag('table')
-        :css({
-            ['text-align'] = 'right',
-            ['dir'] = 'rtl',
-            ['font-size'] = '90%',
-            ['word-break'] = 'break-word',
-            ['width'] = '100%',
-            ['table-layout'] = 'fixed',
-        })
- 
     local properties = mw.wikibase.orderProperties(item:getProperties())
     local property_blacklist_hash = valuesToKeys(mergeTables(property_blacklist, hidden_properties))
 
@@ -384,18 +384,31 @@ function p.databox(frame)
 		dataTable:tag('tr')
                 :tag('th')
                     :attr('scope', 'row')
+                    :css({
+                    	['padding-top'] = '0.225em',
+                    	['line-height'] = '1.1em',
+                    	['padding-right'] = '0.65em'
+                    })
                     :wikitext('لەدایکبوون'):done()
                 :tag('td')
+                	:css({ ['line-height'] = '1.4em', ['max-width'] = '180px' })
                     :wikitext(frame:preprocess(birth))
                     
         if date_of_death then
         	local death = getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
-	        dataTable:tag('tr')
-	                :tag('th')
-	                    :attr('scope', 'row')
-	                    :wikitext('مردن'):done()
-	                :tag('td')
-	                    :wikitext(frame:preprocess(death))
+        	
+        	dataTable:tag('tr')
+                :tag('th')
+                    :attr('scope', 'row')
+                    :css({
+                    	['padding-top'] = '0.225em',
+                    	['line-height'] = '1.1em',
+                    	['padding-right'] = '0.65em'
+                    })
+                    :wikitext('مردن'):done()
+                :tag('td')
+                	:css({ ['line-height'] = '1.4em', ['max-width'] = '180px' })
+                    :wikitext(frame:preprocess(death))
 	    end
 	end
 	
@@ -429,7 +442,7 @@ function p.databox(frame)
             if (value == nil) then
             	if datatype == 'time' then
             		local dateString = getBestStatement(item, property).time
-        			if property == 'P1317' then -- floruit
+        			if property == 'P1317' or property == 'P2031' then -- floruit and work period (start)
         				value = formatDate(lang, dateString, propertyValue.value, 'Y')
         			else
         				value = formatDate(lang, dateString, propertyValue.value)
@@ -445,12 +458,18 @@ function p.databox(frame)
 			if (datatype == 'time' or datatype == 'number') then -- coordinate location
             	value = toKurdishNumbers(value)
 			end
-        
-            row = dataTable:tag('tr')
+        	
+        	row = dataTable:tag('tr')
                 :tag('th')
                     :attr('scope', 'row')
+                    :css({
+                    	['padding-top'] = '0.225em',
+                    	['line-height'] = '1.1em',
+                    	['padding-right'] = '0.65em',
+                    })
                     :wikitext(lang:ucfirst(propertyValue.label)):done()
                 :tag('td')
+                	:css({ ['line-height'] = '1.4em', ['max-width'] = '180px' })
                     :wikitext(frame:preprocess(value))
         end
     end
@@ -473,9 +492,13 @@ function p.databox(frame)
                 ['marker-color'] =  '#224422',
             }
         }
-        databoxRoot:wikitext(frame:extensionTag('mapframe', mw.text.jsonEncode(geojson), {
-            height = 300,
-            width = 300,
+        
+        dataTable:tag('tr'):tag('td')
+            :attr('colspan', 2)
+            :css({ ['text-align'] = 'center'})
+            :wikitext(frame:extensionTag('mapframe', mw.text.jsonEncode(geojson), {
+            height = 250,
+            width = 250,
             frameless = 'frameless',
             align = 'center',
             latitude = latitude,
@@ -485,11 +508,14 @@ function p.databox(frame)
     end
 	
 	local div_start = '<div style="border-style: solid; border-color:gray; border-width: 1px 0 0 0; margin-top: 2em; text-align: center;">'
-	local pen_icon = '&nbsp;[[File:OOjs UI icon edit-ltr.svg|' .. edit_message .. '|12px|baseline|class=noviewer|link=https://www.wikidata.org/wiki/' .. item.id .. ']]'
+	local pen_icon = '&nbsp;[[File:Wikidata-logo.svg|' .. edit_message .. '|22px|baseline|class=noviewer|link=https://www.wikidata.org/wiki/' .. item.id .. ']]'
 	local edit_message_link = '[https://www.wikidata.org/wiki/' .. item.id .. ' لە ویکیدراوە دەستکاریی زانیارییەکان بکە]'
-	databoxRoot:wikitext(div_start .. edit_message_link .. pen_icon .. '</div>')
+	dataTable:tag('tr'):tag('td')
+            :attr('colspan', 2)
+            :css({ ['text-align'] = 'center'})
+            :wikitext(div_start .. edit_message_link .. pen_icon .. '</div>')
      
-     return tostring(databoxRoot)
+     return tostring(dataTable)
 end
 
 return p
