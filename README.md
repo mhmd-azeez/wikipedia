@@ -1,6 +1,9 @@
 # Wikipedia Toolbox
 Resources and tools to make contribution to wikipedia easier 🙂
 
+## [Bots](/bots)
+Some useful bots for wikipedia admins.
+
 ## [Queries](/queries)
 A number of useful queries using Wikidata's [official endpoint](https://query.wikidata.org). You can either use it interactively or use it as an API endpoint by appending `format=json` parameter.
 
