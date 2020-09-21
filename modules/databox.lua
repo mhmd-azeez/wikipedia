@@ -86,6 +86,7 @@ local property_blacklist = {
 	'P465', -- sRGB color hex triplet
 	'P487', -- Unicode character
 	'P7084', -- related category
+	'P1814', -- name in kana
 }
 
 -- Merge two tables and return a new table
@@ -133,22 +134,24 @@ function getBirthStatement(lang, date_of_birth, date_of_death, place_of_birth)
 			 link = false
 		end
 		
-		if link then birth_location = '[[' .. birth_location .. ']]' end
+		if birth_location then
+			if link then birth_location = '[[' .. birth_location .. ']]' end
 			 
-		birth = birth .. '<br>' .. birth_location
+			birth = birth .. '<br>' .. birth_location
 	
-		local birth_country = getBestStatementById(place_of_birth.id, 'P17')
-		if birth_country then
-			birth_country = mw.wikibase.getSitelink(birth_country.id, 'ckbwiki')
-			local link = true
-			if not birth_country then
-				 birth_country = mw.wikibase.getSitelink(birth_country.id, 'enwiki')
-				 link = false
+			local birth_country = getBestStatementById(place_of_birth.id, 'P17')
+			if birth_country then
+				birth_country = mw.wikibase.getSitelink(birth_country.id, 'ckbwiki')
+				local link = true
+				if not birth_country then
+					 birth_country = mw.wikibase.getSitelink(birth_country.id, 'enwiki')
+					 link = false
+				end
+				
+				if link then birth_country = '[[' .. birth_country .. ']]' end
+	
+				birth = birth .. '، ' .. birth_country
 			end
-			
-			if link then birth_country = '[[' .. birth_country .. ']]' end
-
-			birth = birth .. '، ' .. birth_country
 		end
 	end
 	
@@ -172,23 +175,25 @@ function getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
 			link = false
 		end
 		
-		if link then death_location = '[[' .. death_location .. ']]' end
-			
-		death = death_time .. '<br>' .. death_location
-	
-		local death_country = getBestStatementById(place_of_death.id, 'P17')
-		if death_country then
-			death_country = mw.wikibase.getSitelink(death_country.id, 'ckbwiki')
-			
-			local link = true
-			if not death_country then
-				 death_country = mw.wikibase.getSitelink(death_country.id, 'enwiki')
-				 link = false
+		if death_location then
+			if link then death_location = '[[' .. death_location .. ']]' end
+				
+			death = death_time .. '<br>' .. death_location
+		
+			local death_country = getBestStatementById(place_of_death.id, 'P17')
+			if death_country then
+				death_country = mw.wikibase.getSitelink(death_country.id, 'ckbwiki')
+				
+				local link = true
+				if not death_country then
+					 death_country = mw.wikibase.getSitelink(death_country.id, 'enwiki')
+					 link = false
+				end
+				
+				if link then death_country = '[[' .. death_country .. ']]' end
+				
+				death = death .. '، ' .. death_country
 			end
-			
-			if link then death_country = '[[' .. death_country .. ']]' end
-			
-			death = death .. '، ' .. death_country
 		end
 	end
 
