@@ -87,6 +87,7 @@ local property_blacklist = {
 	'P487', -- Unicode character
 	'P7084', -- related category
 	'P1814', -- name in kana
+	'P2001', -- Revised Romanization
 }
 
 -- Merge two tables and return a new table
@@ -126,12 +127,14 @@ function getBirthStatement(lang, date_of_birth, date_of_death, place_of_birth)
 	local birth = birth_time
 
 	if place_of_birth then
+		-- Try to get the Kurdish article name for the entity
 		local birth_location = mw.wikibase.getSitelink(place_of_birth.id, 'ckbwiki')
 		
 		local link = true
 		if not birth_location then
-			 birth_location = mw.wikibase.getSitelink(place_of_birth.id, 'enwiki')
-			 link = false
+			-- If there was no Kurdish article for the entity, then get an article name from other wikis
+			birth_location = mw.wikibase.getLabel(place_of_birth.id)
+			link = false
 		end
 		
 		if birth_location then
@@ -166,19 +169,26 @@ function getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
 		date_of_death_parts[1], date_of_death_parts[2], date_of_death_parts[3],
 		date_of_birth_parts[1], date_of_birth_parts[2], date_of_birth_parts[3])
 	
+	local death = death_time
+	
 	if place_of_death then
 		local death_location = mw.wikibase.getSitelink(place_of_death.id, 'ckbwiki')
-		
+
 		local link = true
 		if not death_location then
 			death_location = mw.wikibase.getSitelink(place_of_death.id, 'enwiki')
 			link = false
 		end
 		
+		if not death_location then
+			death_location = mw.wikibase.getLabel(place_of_death.id)
+			link = false
+		end
+		
 		if death_location then
 			if link then death_location = '[[' .. death_location .. ']]' end
 				
-			death = death_time .. '<br>' .. death_location
+			death = death .. '<br>' .. death_location
 		
 			local death_country = getBestStatementById(place_of_death.id, 'P17')
 			if death_country then
@@ -401,7 +411,6 @@ function p.databox(frame)
                     
         if date_of_death then
         	local death = getDeathStatement(lang, date_of_birth, date_of_death, place_of_death)
-        	
         	dataTable:tag('tr')
                 :tag('th')
                     :attr('scope', 'row')
